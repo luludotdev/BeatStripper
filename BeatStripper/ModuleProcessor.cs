@@ -26,7 +26,8 @@ namespace BeatStripper
 
             foreach (string dir in directories)
             {
-                resolver.AddSearchDirectory(dir);
+                if (Directory.Exists(dir))
+                    resolver.AddSearchDirectory(dir);
             }
 
             ReaderParameters parameters = new ReaderParameters
