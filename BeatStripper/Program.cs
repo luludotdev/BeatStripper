@@ -10,54 +10,62 @@ namespace BeatStripper
 
         static void Main(string[] args)
         {
-            if (args.Length > 0 && args[0] != null)
+            try
             {
-                InstallDirectory = Path.GetDirectoryName(args[0]);
-                if (File.Exists(Path.Combine(InstallDirectory, InstallDir.BeatSaberEXE)) == false)
+                if (args.Length > 0 && args[0] != null)
                 {
-                    throw new Exception();
+                    InstallDirectory = Path.GetDirectoryName(args[0]);
+                    if (File.Exists(Path.Combine(InstallDirectory, InstallDir.BeatSaberEXE)) == false)
+                    {
+                        throw new Exception();
+                    }
                 }
-            }
-            else
-            {
-                Logger.Log("Resolving Beat Saber install directory");
-                InstallDirectory = InstallDir.GetInstallDir();
-                if (InstallDirectory == null)
+                else
                 {
-                    throw new Exception();
+                    Logger.Log("Resolving Beat Saber install directory");
+                    InstallDirectory = InstallDir.GetInstallDir();
+                    if (InstallDirectory == null)
+                    {
+                        throw new Exception();
+                    }
                 }
-            }
 
-            string libsDir = Path.Combine(InstallDirectory, @"Libs");
-            string managedDir = Path.Combine(InstallDirectory, @"Beat Saber_Data\Managed");
+                string libsDir = Path.Combine(InstallDirectory, @"Libs");
+                string managedDir = Path.Combine(InstallDirectory, @"Beat Saber_Data\Managed");
 
-            Logger.Log("Resolving Beat Saber version");
-            string version = VersionFinder.FindVersion(InstallDirectory);
+                Logger.Log("Resolving Beat Saber version");
+                string version = VersionFinder.FindVersion(InstallDirectory);
 
-            string outDir = Path.Combine(Directory.GetCurrentDirectory(), "stripped", version);
-            Logger.Log("Creating output directory");
-            Directory.CreateDirectory(outDir);
+                string outDir = Path.Combine(Directory.GetCurrentDirectory(), "stripped", version);
+                Logger.Log("Creating output directory");
+                Directory.CreateDirectory(outDir);
 
-            string[] whitelist = new string[]
-            {
+                string[] whitelist = new string[]
+                {
                 "IPA.",
                 "TextMeshPro",
                 "UnityEngine.",
                 "Assembly-CSharp",
-            };
+                };
 
-            foreach (string f in ResolveDLLs(managedDir, whitelist))
+                foreach (string f in ResolveDLLs(managedDir, whitelist))
+                {
+                    if (File.Exists(f) == false) continue;
+                    var file = new FileInfo(f);
+                    Logger.Log($"Stripping {file.Name}");
+
+                    var mod = ModuleProcessor.Load(file.FullName, libsDir, managedDir);
+                    mod.Virtualize();
+                    mod.Strip();
+
+                    string outFile = Path.Combine(outDir, file.Name);
+                    mod.Write(outFile);
+                }
+            }
+            catch (Exception ex)
             {
-                if (File.Exists(f) == false) continue;
-                var file = new FileInfo(f);
-                Logger.Log($"Stripping {file.Name}");
-
-                var mod = ModuleProcessor.Load(file.FullName, libsDir, managedDir);
-                mod.Virtualize();
-                mod.Strip();
-
-                string outFile = Path.Combine(outDir, file.Name);
-                mod.Write(outFile);
+                Console.WriteLine(ex.ToString());
+                Console.ReadKey();
             }
         }
 
