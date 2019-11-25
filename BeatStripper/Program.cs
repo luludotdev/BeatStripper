@@ -30,6 +30,17 @@ namespace BeatStripper
                     }
                 }
 
+                if (BSIPA.EnsureExists(InstallDirectory) == false)
+                {
+                    Logger.Log("Installed BSIPA");
+                }
+
+                if (BSIPA.IsPatched(InstallDirectory) == false)
+                {
+                    Logger.Log("Patching game with BSIPA");
+                    BSIPA.PatchDir(InstallDirectory);
+                }
+
                 string libsDir = Path.Combine(InstallDirectory, @"Libs");
                 string managedDir = Path.Combine(InstallDirectory, @"Beat Saber_Data\Managed");
 
