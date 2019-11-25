@@ -53,10 +53,10 @@ namespace BeatStripper
 
                 string[] whitelist = new string[]
                 {
-                "IPA.",
-                "TextMeshPro",
-                "UnityEngine.",
-                "Assembly-CSharp",
+                    "IPA.",
+                    "TextMeshPro",
+                    "UnityEngine.",
+                    "Assembly-CSharp",
                 };
 
                 foreach (string f in ResolveDLLs(managedDir, whitelist))
@@ -82,7 +82,8 @@ namespace BeatStripper
 
         internal static string[] ResolveDLLs(string managedDir, string[] whitelist)
         {
-            var files = Directory.GetFiles(managedDir).Where(path => {
+            var files = Directory.GetFiles(managedDir).Where(path =>
+            {
                 FileInfo info = new FileInfo(path);
                 if (info.Extension != ".dll") return false;
 
