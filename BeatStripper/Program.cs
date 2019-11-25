@@ -8,13 +8,24 @@ namespace BeatStripper
     {
         internal static string InstallDirectory;
 
-        static void Main(string[] _)
+        static void Main(string[] args)
         {
-            Logger.Log("Resolving Beat Saber install directory");
-            InstallDirectory = InstallDir.GetInstallDir();
-            if (InstallDirectory == null)
+            if (args.Length > 0 && args[0] != null)
             {
-                throw new Exception();
+                InstallDirectory = Path.GetDirectoryName(args[0]);
+                if (File.Exists(Path.Combine(InstallDirectory, InstallDir.BeatSaberEXE)) == false)
+                {
+                    throw new Exception();
+                }
+            }
+            else
+            {
+                Logger.Log("Resolving Beat Saber install directory");
+                InstallDirectory = InstallDir.GetInstallDir();
+                if (InstallDirectory == null)
+                {
+                    throw new Exception();
+                }
             }
 
             string libsDir = Path.Combine(InstallDirectory, @"Libs");
