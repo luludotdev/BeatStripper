@@ -57,20 +57,18 @@ namespace BeatStripper
                     "TextMeshPro",
                     "UnityEngine.",
                     "Assembly-CSharp",
+                    "0Harmony",
+                    "Newtonsoft.Json",
                 };
 
                 foreach (string f in ResolveDLLs(managedDir, whitelist))
                 {
-                    if (File.Exists(f) == false) continue;
-                    var file = new FileInfo(f);
-                    Logger.Log($"Stripping {file.Name}");
+                    StripDLL(f, outDir, libsDir, managedDir);
+                }
 
-                    var mod = ModuleProcessor.Load(file.FullName, libsDir, managedDir);
-                    mod.Virtualize();
-                    mod.Strip();
-
-                    string outFile = Path.Combine(outDir, file.Name);
-                    mod.Write(outFile);
+                foreach (string f in ResolveDLLs(libsDir, whitelist))
+                {
+                    StripDLL(f, outDir, libsDir, managedDir);
                 }
             }
             catch (Exception ex)
@@ -96,6 +94,20 @@ namespace BeatStripper
             });
 
             return files.ToArray();
+        }
+
+        internal static void StripDLL(string f, string outDir, params string[] resolverDirs)
+        {
+            if (File.Exists(f) == false) return;
+            var file = new FileInfo(f);
+            Logger.Log($"Stripping {file.Name}");
+
+            var mod = ModuleProcessor.Load(file.FullName, resolverDirs);
+            mod.Virtualize();
+            mod.Strip();
+
+            string outFile = Path.Combine(outDir, file.Name);
+            mod.Write(outFile);
         }
     }
 }
