@@ -59,6 +59,14 @@ namespace BeatStripper
                     "Assembly-CSharp",
                     "0Harmony",
                     "Newtonsoft.Json",
+                    "MainAssembly",
+                    "Cinemachine",
+                    "DynamicBone",
+                    "FinalIK",
+                    "OculusPlatform",
+                    "HMLib",
+                    "HMUI",
+                    "VRUI",
                 };
 
                 foreach (string f in ResolveDLLs(managedDir, whitelist))
