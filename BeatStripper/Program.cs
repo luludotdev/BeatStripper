@@ -75,12 +75,17 @@ namespace BeatStripper
                     "Zenject"
                 };
 
-                foreach (string f in ResolveDLLs(managedDir, whitelist))
+                string[] blacklist = new string[]
+                {
+                    "System.Core.dll"
+                };
+
+                foreach (string f in ResolveDLLs(managedDir, whitelist, blacklist))
                 {
                     StripDLL(f, outDir, libsDir, managedDir);
                 }
 
-                foreach (string f in ResolveDLLs(libsDir, whitelist))
+                foreach (string f in ResolveDLLs(libsDir, whitelist, blacklist))
                 {
                     StripDLL(f, outDir, libsDir, managedDir);
                 }
@@ -92,7 +97,7 @@ namespace BeatStripper
             }
         }
 
-        internal static string[] ResolveDLLs(string managedDir, string[] whitelist)
+        internal static string[] ResolveDLLs(string managedDir, string[] whitelist, string[] blacklist)
         {
             var files = Directory.GetFiles(managedDir).Where(path =>
             {
@@ -101,7 +106,7 @@ namespace BeatStripper
 
                 foreach (string substr in whitelist)
                 {
-                    if (info.Name.Contains(substr)) return true;
+                    if (info.Name.Contains(substr) && !blacklist.Contains(info.Name)) return true;
                 }
 
                 return false;
