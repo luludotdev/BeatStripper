@@ -59,6 +59,7 @@ namespace BeatStripper
                     "Assembly-CSharp",
                     "0Harmony",
                     "Newtonsoft.Json",
+                    "netstandard",
                     "Main",
                     "Cinemachine",
                     "Colors",
