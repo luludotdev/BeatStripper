@@ -1,6 +1,8 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 
 namespace BeatStripper
 {
@@ -14,9 +16,14 @@ namespace BeatStripper
             {
                 if (args.Length > 0 && args[0] != null)
                 {
-                    InstallDirectory = Path.GetDirectoryName(args[0]);
-                    if (File.Exists(Path.Combine(InstallDirectory, InstallDir.BeatSaberEXE)) == false)
+                    if (Directory.Exists(args[0]))
+                        InstallDirectory = args[0];
+                    else
+                        InstallDirectory = Path.GetDirectoryName(args[0]);
+                    string beatSaberExe = Path.Combine(InstallDirectory, InstallDir.BeatSaberEXE);
+                    if (File.Exists(beatSaberExe) == false)
                     {
+                        Console.WriteLine($"Could not find '{beatSaberExe}'. InstallDirectory: '{InstallDirectory}'");
                         throw new Exception();
                     }
                 }
@@ -40,26 +47,37 @@ namespace BeatStripper
                     Logger.Log("Patching game with BSIPA");
                     BSIPA.PatchDir(InstallDirectory);
                 }
+                string libs = @"Libs";
+                string managed = @"Beat Saber_Data\Managed";
 
-                string libsDir = Path.Combine(InstallDirectory, @"Libs");
-                string managedDir = Path.Combine(InstallDirectory, @"Beat Saber_Data\Managed");
+                string libsDir = Path.Combine(InstallDirectory, libs);
+                string managedDir = Path.Combine(InstallDirectory, managed);
 
                 Logger.Log("Resolving Beat Saber version");
                 string version = VersionFinder.FindVersion(InstallDirectory);
 
-                string outDir = Path.Combine(Directory.GetCurrentDirectory(), "stripped", version);
+                string outDir = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "stripped", version);
+                string outLibs = Path.Combine(outDir, libs);
+                string outManaged = Path.Combine(outDir, managed);
                 Logger.Log("Creating output directory");
                 Directory.CreateDirectory(outDir);
+                Directory.CreateDirectory(outManaged);
+                Directory.CreateDirectory(outLibs);
 
                 string[] whitelist = new string[]
                 {
                     "IPA.",
                     "TextMeshPro",
                     "UnityEngine.",
+                    "Unity.",
+                    "VivaDock",
+                    "Mono.",
+                    "Ookii.",
+                    "LIV",
+                    "Accessibility",
+                    "MediaLoader",
+                    "I18N",
                     "Assembly-CSharp",
-                    "0Harmony",
-                    "Newtonsoft.Json",
-                    "netstandard",
                     "Main",
                     "Cinemachine",
                     "Colors",
@@ -72,7 +90,12 @@ namespace BeatStripper
                     "HMUI",
                     "Rendering",
                     "VRUI",
-                    "Zenject"
+                    "Zenject",
+                    "Polyglot",
+                    "netstandard",
+                    "0Harmony",
+                    "Newtonsoft.Json",
+                    "SemVer"
                 };
 
                 string[] blacklist = new string[]
@@ -82,12 +105,12 @@ namespace BeatStripper
 
                 foreach (string f in ResolveDLLs(managedDir, whitelist, blacklist))
                 {
-                    StripDLL(f, outDir, libsDir, managedDir);
+                    StripDLL(f, outManaged, libsDir, managedDir);
                 }
 
                 foreach (string f in ResolveDLLs(libsDir, whitelist, blacklist))
                 {
-                    StripDLL(f, outDir, libsDir, managedDir);
+                    StripDLL(f, outLibs, libsDir, managedDir);
                 }
             }
             catch (Exception ex)
@@ -95,24 +118,41 @@ namespace BeatStripper
                 Console.WriteLine(ex.ToString());
                 Console.ReadKey();
             }
+            Console.WriteLine("Finished");
+            Console.ReadKey();
         }
 
         internal static string[] ResolveDLLs(string managedDir, string[] whitelist, string[] blacklist)
         {
-            var files = Directory.GetFiles(managedDir).Where(path =>
+            List<string> acceptedFiles = new List<string>();
+            var filePaths = Directory.GetFiles(managedDir);
+            foreach (var filePath in filePaths)
             {
-                FileInfo info = new FileInfo(path);
-                if (info.Extension != ".dll") return false;
-
-                foreach (string substr in whitelist)
+                FileInfo file = new FileInfo(filePath);
+                if (file.Extension != ".dll")
+                    continue;
+                bool passedWhitelist = false;
+                foreach (var whiteListItem in whitelist)
                 {
-                    if (info.Name.Contains(substr) && !blacklist.Contains(info.Name)) return true;
+                    if(file.Name.Contains(whiteListItem))
+                    {
+                        passedWhitelist = true;
+                        break;
+                    }
                 }
+                    
+                if (passedWhitelist)
+                {
+                    if (!blacklist.Any(b => b.Contains(file.Name)))
+                        acceptedFiles.Add(filePath);
+                    else
+                        Console.WriteLine($"Skipping {file.Name}, is blacklisted.");
+                }
+                else
+                    Console.WriteLine($"Skipping {file.Name}, not in the whitelist.");
+            }
 
-                return false;
-            });
-
-            return files.ToArray();
+            return acceptedFiles.ToArray();
         }
 
         internal static void StripDLL(string f, string outDir, params string[] resolverDirs)
