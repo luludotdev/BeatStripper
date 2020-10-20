@@ -165,7 +165,7 @@ namespace BeatStripper
             Logger.Log($"Stripping {file.Name}");
 
             var mod = ModuleProcessor.Load(file.FullName, resolverDirs);
-            mod.Virtualize();
+            //mod.Virtualize(); // This could make the assemblies inconsistent with the actual game assemblies?
             mod.Strip();
 
             string outFile = Path.Combine(outDir, file.Name);
