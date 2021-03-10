@@ -1,0 +1,10 @@
+{
+  "Plugins": [
+    "BS_Utils.dll",
+    "BSML.dll",
+    "SiraUtil.dll",
+    "SongCore.dll"
+  ],
+  "Libs": [],
+  "Managed": []
+}

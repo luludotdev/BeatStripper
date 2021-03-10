@@ -6,26 +6,22 @@ namespace BeatStripper
 {
     internal static class VersionFinder
     {
-        internal static string FindVersion(string installDir)
+        public static string GetVersion(string installDir)
         {
-            string managersPath = Path.Combine(installDir, @"Beat Saber_Data", @"globalgamemanagers");
-            if (File.Exists(managersPath) == false)
+            string filename = Path.Combine(installDir, "Beat Saber_Data", "globalgamemanagers");
+            using (FileStream fs = new FileStream(filename, FileMode.Open, FileAccess.Read))
             {
-                throw new FileNotFoundException();
-            }
+                byte[] file = File.ReadAllBytes(filename);
+                byte[] bytes = new byte[64];
 
-            using (var fileStream = new FileStream(managersPath, FileMode.Open, FileAccess.Read))
-            {
-                byte[] bytes = File.ReadAllBytes(managersPath);
-                byte[] versionBytes = new byte[16];
+                fs.Read(file, 0, Convert.ToInt32(fs.Length));
+                fs.Close();
+                int index = Encoding.UTF8.GetString(file).IndexOf("public.app-category.games") + 136;
 
-                fileStream.Read(bytes, 0, Convert.ToInt32(fileStream.Length));
-                fileStream.Close();
+                Array.Copy(file, index, bytes, 0, 64);
+                string version = Encoding.UTF8.GetString(bytes).Trim(IllegalCharacters);
 
-                int sourceIndex = Encoding.Default.GetString(bytes).IndexOf("public.app-category.games") + 136;
-                Array.Copy(bytes, sourceIndex, versionBytes, 0, 16);
-
-                return Encoding.Default.GetString(versionBytes).Trim(IllegalCharacters).Trim();
+                return version;
             }
         }
 

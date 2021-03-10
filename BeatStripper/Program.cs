@@ -1,3 +1,4 @@
+using SimpleJSON;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -47,23 +48,24 @@ namespace BeatStripper
                     Logger.Log("Patching game with BSIPA");
                     BSIPA.PatchDir(InstallDirectory);
                 }
-                string libs = @"Libs";
-                string managed = @"Beat Saber_Data\Managed";
+                string libs = "Libs";
+                string managed = Path.Combine("Beat Saber_Data", "Managed");
+                string plugins = "Plugins";
 
-                string libsDir = Path.Combine(InstallDirectory, libs);
-                string managedDir = Path.Combine(InstallDirectory, managed);
+                string libsSource = Path.Combine(InstallDirectory, libs);
+                string managedSource = Path.Combine(InstallDirectory, managed);
+                string pluginsSource = Path.Combine(InstallDirectory, plugins);
 
                 Logger.Log("Resolving Beat Saber version");
-                string version = VersionFinder.FindVersion(InstallDirectory);
+                string version = VersionFinder.GetVersion(InstallDirectory);
 
-                string outDir = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "stripped", version);
+                string outDir = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "stripped", $"BeatSaber_{version}");
                 string outLibs = Path.Combine(outDir, libs);
                 string outManaged = Path.Combine(outDir, managed);
+                string outPlugins = Path.Combine(outDir, plugins);
                 Logger.Log("Creating output directory");
                 Directory.CreateDirectory(outDir);
-                Directory.CreateDirectory(outManaged);
-                Directory.CreateDirectory(outLibs);
-
+                var extras = ParseExtras("extra-assemblies.json");
                 string[] whitelist = new string[]
                 {
                     "IPA.",
@@ -105,16 +107,10 @@ namespace BeatStripper
                 {
                     "System.Core.dll"
                 };
-
-                foreach (string f in ResolveDLLs(managedDir, whitelist, blacklist))
-                {
-                    StripDLL(f, outManaged, libsDir, managedDir);
-                }
-
-                foreach (string f in ResolveDLLs(libsDir, whitelist, blacklist))
-                {
-                    StripDLL(f, outLibs, libsDir, managedDir);
-                }
+                string[] resolveDirs = { managedSource, libsSource, pluginsSource };
+                ProcessDirectory(managedSource, outManaged, whitelist, blacklist, extras["Managed"], resolveDirs);
+                ProcessDirectory(libsSource, outLibs, whitelist, blacklist, extras["Libs"], resolveDirs);
+                ProcessDirectory(pluginsSource, outPlugins, whitelist, blacklist, extras["Plugins"], resolveDirs);
             }
             catch (Exception ex)
             {
@@ -125,7 +121,63 @@ namespace BeatStripper
             Console.ReadKey();
         }
 
-        internal static string[] ResolveDLLs(string managedDir, string[] whitelist, string[] blacklist)
+        internal static Dictionary<string, string[]> ParseExtras(string filePath)
+        {
+            Dictionary<string, string[]> extras = new Dictionary<string, string[]>()
+            {
+                {"Managed", Array.Empty<string>() },
+                {"Libs", Array.Empty<string>() },
+                {"Plugins", Array.Empty<string>() }
+            };
+            if (!File.Exists(filePath))
+            {
+                Console.WriteLine("No extra assemblies config.");
+                return extras;
+            }
+            try
+            {
+                string json = File.ReadAllText(filePath);
+                JSONObject obj = (JSONObject)JSON.Parse(json);
+                extras["Managed"] = GetExtras("Managed", obj);
+                extras["Libs"] = GetExtras("Libs", obj);
+                extras["Plugins"] = GetExtras("Plugins", obj);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error parsing extra assemblies file: {ex.Message}");
+            }
+            return extras;
+        }
+
+        internal static string[] GetExtras(string name, JSONObject obj)
+        {
+            if (obj == null)
+                return Array.Empty<string>();
+            JSONArray ary = obj[name] as JSONArray;
+            if (ary != null)
+                return ary.Linq.Select(e => e.Value.Value).ToArray();
+            return Array.Empty<string>();
+        }
+
+        internal static void ProcessDirectory(string sourceDir, string outDir, IEnumerable<string> whitelist,
+            IEnumerable<string> blacklist, IEnumerable<string> extras, IEnumerable<string> resolveDirs)
+        {
+            HashSet<string> strippedFiles = new HashSet<string>();
+            if (extras == null)
+                extras = Array.Empty<string>();
+            foreach (string f in ResolveDLLs(sourceDir, whitelist.Concat(extras), blacklist))
+            {
+                if (!strippedFiles.Add(f))
+                {
+                    Console.WriteLine($"Duplicate entry: already stripped '{f}'");
+                    continue;
+                }
+                Directory.CreateDirectory(outDir);
+                StripDLL(f, outDir, resolveDirs.ToArray());
+            }
+        }
+
+        internal static string[] ResolveDLLs(string managedDir, IEnumerable<string> whitelist, IEnumerable<string> blacklist)
         {
             List<string> acceptedFiles = new List<string>();
             var filePaths = Directory.GetFiles(managedDir);
@@ -137,13 +189,13 @@ namespace BeatStripper
                 bool passedWhitelist = false;
                 foreach (var whiteListItem in whitelist)
                 {
-                    if(file.Name.Contains(whiteListItem))
+                    if (file.Name.Contains(whiteListItem))
                     {
                         passedWhitelist = true;
                         break;
                     }
                 }
-                    
+
                 if (passedWhitelist)
                 {
                     if (!blacklist.Any(b => b.Contains(file.Name)))
