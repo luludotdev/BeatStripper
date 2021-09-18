@@ -15,6 +15,7 @@ namespace BeatStripper
         internal const string BeatSaberAPPID = "620980";
         internal const string BeatSaberEXE = "Beat Saber.exe";
         internal const string IPA_EXE = "IPA.exe";
+        internal const string VDF_Path_Regex = "\\s*\\\"path\\\"\\s*\\\"(.*)\\\"";
 
         public static string GetInstallDir()
         {
@@ -51,10 +52,19 @@ namespace BeatStripper
 
         public static string GetSteamDir()
         {
-            string SteamInstall = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, RegistryView.Registry64)?.OpenSubKey("SOFTWARE")?.OpenSubKey("WOW6432Node")?.OpenSubKey("Valve")?.OpenSubKey("Steam")?.GetValue("InstallPath").ToString();
+            string SteamInstall = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, RegistryView.Registry64)?
+                .OpenSubKey("SOFTWARE")?
+                .OpenSubKey("WOW6432Node")?
+                .OpenSubKey("Valve")?
+                .OpenSubKey("Steam")?
+                .GetValue("InstallPath")?.ToString();
             if (string.IsNullOrEmpty(SteamInstall))
             {
-                SteamInstall = Registry.LocalMachine.OpenSubKey("SOFTWARE")?.OpenSubKey("WOW6432Node")?.OpenSubKey("Valve")?.OpenSubKey("Steam")?.GetValue("InstallPath").ToString();
+                SteamInstall = Registry.LocalMachine.OpenSubKey("SOFTWARE")?
+                    .OpenSubKey("WOW6432Node")?
+                    .OpenSubKey("Valve")?
+                    .OpenSubKey("Steam")?
+                    .GetValue("InstallPath")?.ToString();
             }
 
             if (string.IsNullOrEmpty(SteamInstall)) return null;
@@ -62,7 +72,7 @@ namespace BeatStripper
             string vdf = Path.Combine(SteamInstall, @"steamapps\libraryfolders.vdf");
             if (!File.Exists(@vdf)) return null;
 
-            Regex regex = new Regex("\\s\"\\d\"\\s+\"(.+)\"");
+            Regex regex = new Regex(VDF_Path_Regex);
             List<string> SteamPaths = new List<string>
             {
                 Path.Combine(SteamInstall, @"steamapps")
@@ -109,7 +119,13 @@ namespace BeatStripper
 
         public static string GetOculusDir()
         {
-            string OculusInstall = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, RegistryView.Registry64)?.OpenSubKey("SOFTWARE")?.OpenSubKey("Wow6432Node")?.OpenSubKey("Oculus VR, LLC")?.OpenSubKey("Oculus")?.OpenSubKey("Config")?.GetValue("InitialAppLibrary").ToString();
+            string OculusInstall = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, RegistryView.Registry64)?
+                .OpenSubKey("SOFTWARE")?
+                .OpenSubKey("Wow6432Node")?
+                .OpenSubKey("Oculus VR, LLC")?
+                .OpenSubKey("Oculus")?
+                .OpenSubKey("Config")?
+                .GetValue("InitialAppLibrary")?.ToString();
             if (string.IsNullOrEmpty(OculusInstall)) return null;
 
             if (!string.IsNullOrEmpty(OculusInstall))
@@ -120,7 +136,10 @@ namespace BeatStripper
                 }
             }
 
-            using (RegistryKey librariesKey = Registry.CurrentUser.OpenSubKey("Software")?.OpenSubKey("Oculus VR, LLC")?.OpenSubKey("Oculus")?.OpenSubKey("Libraries"))
+            using (RegistryKey librariesKey = Registry.CurrentUser.OpenSubKey("Software")?
+                .OpenSubKey("Oculus VR, LLC")?
+                .OpenSubKey("Oculus")?
+                .OpenSubKey("Libraries"))
             {
                 WqlObjectQuery wqlQuery = new WqlObjectQuery("SELECT * FROM Win32_Volume");
                 ManagementObjectSearcher searcher = new ManagementObjectSearcher(wqlQuery);

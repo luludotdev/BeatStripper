@@ -13,7 +13,7 @@ namespace BeatStripper
     {
         private static readonly HttpClient client = new HttpClient();
 
-        internal const string RepoSlug = "beat-saber-modding-group/BeatSaber-IPA-Reloaded";
+        internal const string RepoSlug = "bsmg/BeatSaber-IPA-Reloaded";
         internal const string EXE = "IPA.exe";
         internal const string WinHTTPDll = "winhttp.dll";
 
