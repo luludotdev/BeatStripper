@@ -34,7 +34,7 @@ namespace BeatStripper
                     InstallDirectory = InstallDir.GetInstallDir();
                     if (InstallDirectory == null)
                     {
-                        throw new Exception();
+                        throw new Exception("Could not find install directory.");
                     }
                 }
 
